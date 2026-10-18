@@ -15,7 +15,10 @@ export const AUTHOR_SITE_URL = 'https://www.alexewerlof.com/'
 export const REPOSITORY_URL = 'https://github.com/alexewerlof/1-click-timer'
 
 /** Where a bug report goes — the settings screen's "Report a bug" button. */
-export const ISSUES_URL = 'https://github.com/alexewerlof/1-click-timer/issues'
+export const ISSUES_URL =
+    import.meta.env.MODE === 'firefox'
+        ? 'https://github.com/AdrianTM/1-click-timer/issues'
+        : 'https://github.com/alexewerlof/1-click-timer/issues'
 
 /**
  * Opens a URL in a new tab. Prefers `chrome.tabs` (the extension context) and

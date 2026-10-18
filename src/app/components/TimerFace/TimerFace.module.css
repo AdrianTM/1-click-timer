@@ -80,15 +80,24 @@
 }
 
 /*
- * Every numeral is a one-click shortcut to its own duration. `bounding-box`
- * makes the whole numeral a solid hit target, so the gap between the digits of
- * "15" does not fall through to the face; the pointer cursor advertises it. The
- * preview numeral is not part of the ring, so it is left alone.
+ * Explicit transparent geometry fills the gaps between digits in Firefox too,
+ * where SVG pointer-events: bounding-box is unsupported.
  */
 .numeralRing text {
-    pointer-events: bounding-box;
     cursor: pointer;
     transition: fill 120ms ease;
+}
+
+.numeralTarget {
+    cursor: pointer;
+}
+
+.numeralHit {
+    fill: transparent;
+    pointer-events: all;
+    width: var(--numeral-hit-width);
+    height: var(--numeral-hit-height);
+    transform: translate(calc(var(--numeral-hit-width) / -2), calc(var(--numeral-hit-height) / -2));
 }
 
 /*
@@ -98,7 +107,7 @@
  * chosen Remaining colour, or the theme's red under Gradient, so the preview
  * never follows the live sector colour.
  */
-.numeralRing text:hover {
+.numeralTarget:hover text {
     fill: var(--preview);
 }
 

@@ -1,5 +1,6 @@
 node_modules/
 dist/
+dist-firefox/
 .vitest/
 
 # Release artifacts (`npm run deploy`). The ZIP is uploaded to the Chrome Web

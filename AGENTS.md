@@ -1,6 +1,14 @@
 # 1-click timer
 
-A Chrome extension that provides a one-click countdown timer with a visual dial UI.
+A Chrome and Firefox extension that provides a one-click countdown timer with a visual dial UI.
+
+The status and notification behavior below describe Chrome. Firefox 140+ is a
+second MV3 target: `scripts/manifest/firefox.ts` derives its manifest and Vite
+writes `dist-firefox/`. Its background is a module event page, and
+`background/ring.ts` plays audio there with a local heartbeat only during the
+ring. Firefox notifications have no buttons and closing them cannot acknowledge
+the alarm; click to focus the timer and use its Stop/Restart controls. See
+CONTRIBUTING.md for all Firefox commands and AMO packaging/signing instructions.
 
 > **Status: Phase 4 — the alarm.** The service worker owns the timer in
 > `chrome.storage.local` as an absolute `endTime`, so it survives closing the
@@ -96,7 +104,9 @@ popup.html / fullscreen.html / settings.html
 app/ and background/ both import shared/timer.ts (record + reducer + protocol)
 background/index.ts (service worker) — the single writer
   ├─ chrome.storage.local (truth)   └─ chrome.alarms, chrome.action, chrome.notifications, chrome.tabs
-  └─ offscreen.html (offscreen/offscreen.ts) — the alarm audio, over shared/offscreen.ts
+  └─ background/ring.ts — shared ringPlayer, hosted by:
+       ├─ Chrome: offscreen.html (offscreen/offscreen.ts), over shared/offscreen.ts
+       └─ Firefox: the background event page, with a bounded local storage heartbeat
 ```
 
 The countdown stores an absolute `endTime`; remaining seconds are always computed
@@ -213,7 +223,7 @@ termination. The UI never accumulates time.
   `byUser`, so our own `clear` is ignored) **resets the timer to idle** — so
   dismissing the notice can never leave a ring for a timer the user has
   acknowledged. A button press dismisses the notice too, so `onButtonClicked` sets
-  an in-memory `notificationButtonHandled` flag (cleared when a fresh notice is
+  an in-memory `buttonHandled` flag in `background/notifications.ts` (cleared when a fresh notice is
   raised) that `onClosed` consumes instead of resetting — without it, Restart's own
   close would immediately undo the timer it just started (`onButtonClicked` fires
   before `onClosed`). The ring's end time is the record's `ringUntil`, an absolute ms
@@ -223,6 +233,21 @@ termination. The UI never accumulates time.
   without the guard both fire): an in-memory flag plus a `status === 'running'`
   check. Before that guard the alarm could raise two notifications and open two
   tabs.
+- **Background work is serialized.** `enqueue` orders startup and state-changing
+  events; the synchronous `runtime.onStartup` listener wakes Firefox to recreate
+  alarms after browser restart. Completion messages include `ringUntil`, so an
+  old ring cannot clear a newer one. `background/ring.ts` also serializes Chrome
+  audio-host creation/closure and cancels pending closure when a new ring starts.
+- **Firefox exposes unsupported event stubs.** Checking for an
+  `onButtonClicked.addListener` function alone is insufficient: Firefox exposes
+  one but rejects notification `buttons` synchronously. `notifications.ts` checks
+  the Firefox-only runtime `getBrowserInfo` capability too and catches synchronous
+  validation failures as well as promise rejections. It ignores Firefox closes,
+  because no `byUser` is provided and system timeouts must not reset the timer.
+- **Numeral hit targets are real geometry.** Transparent SVG rectangles fill
+  gaps between digits; Firefox does not support `pointer-events: bounding-box`.
+  Their sizes derive from the numeral font token, and remain hit targets while
+  the ring fades. The interaction project tests both browser engines.
 - **Bringing the surface forward needs no `tabs` permission.**
   `shared/surfaces.ts`'s `revealSurface` uses `chrome.runtime.getContexts({ contextTypes: ['TAB'] })`
   (Chrome 116+) to find an open `fullscreen.html` or `popup.html` tab and focus it

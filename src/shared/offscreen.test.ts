@@ -18,7 +18,8 @@ describe('offscreen protocol', () => {
     })
 
     it('recognizes only the worker ring-ended report', () => {
-        expect(isRingEndedMessage({ target: WORKER_TARGET, type: 'ring-ended' })).toBe(true)
+        expect(isRingEndedMessage({ target: WORKER_TARGET, type: 'ring-ended', ringUntil: 123 })).toBe(true)
+        expect(isRingEndedMessage({ target: WORKER_TARGET, type: 'ring-ended' })).toBe(false)
         expect(isRingEndedMessage({ target: 'offscreen', type: 'ring' })).toBe(false)
         expect(isRingEndedMessage({ target: WORKER_TARGET, type: 'ring' })).toBe(false)
         expect(isRingEndedMessage(undefined)).toBe(false)

@@ -24,9 +24,12 @@ function renderNumerals() {
             // `data-numeral-minutes` is how a click on this numeral is resolved
             // to a duration: a numeral sits off the disc, so the pointer's
             // position cannot tell which one it is (see `TimerFace.handleClick`).
-            <text key={minute} className={styles.numeral} x={position.x} y={position.y} data-numeral-minutes={minute}>
-                {minute}
-            </text>
+            <g key={minute} className={styles.numeralTarget} data-numeral-minutes={minute}>
+                <rect className={styles.numeralHit} x={position.x} y={position.y} aria-hidden="true" />
+                <text className={styles.numeral} x={position.x} y={position.y} data-numeral-minutes={minute}>
+                    {minute}
+                </text>
+            </g>
         )
     })
 }

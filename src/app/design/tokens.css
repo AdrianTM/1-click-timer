@@ -78,6 +78,8 @@
 
     /* ---- dial typography (px here means SVG user units) ---- */
     --size-numeral: 8px;
+    --numeral-hit-width: calc(var(--size-numeral) * 1.6);
+    --numeral-hit-height: calc(var(--size-numeral) * 1.4);
     --weight-numeral: 700;
     --tracking-numeral: -0.03em;
     /* Was 4.4px in a 106-unit-tall viewBox; the viewBox is now taller, so this

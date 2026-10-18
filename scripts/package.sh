@@ -9,16 +9,21 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DIST="$ROOT/dist"
+TARGET="${1:-chrome}"
+case "$TARGET" in
+    chrome) DIST="$ROOT/dist"; SUFFIX="" ;;
+    firefox) DIST="$ROOT/dist-firefox"; SUFFIX="-firefox" ;;
+    *) echo "package: expected chrome or firefox" >&2; exit 1 ;;
+esac
 OUT_DIR="$ROOT/dashboard/package"
 
 if [[ ! -f "$DIST/manifest.json" ]]; then
-    echo "package: nothing built in dist/ — run 'npm run build' first" >&2
+    echo "package: nothing built in $DIST — build the $TARGET target first" >&2
     exit 1
 fi
 
-VERSION="$(node -p "JSON.parse(require('node:fs').readFileSync('$ROOT/src/manifest.json', 'utf8')).version")"
-OUTPUT="$OUT_DIR/1-click-timer-$VERSION.zip"
+VERSION="$(node -p "JSON.parse(require('node:fs').readFileSync('$DIST/manifest.json', 'utf8')).version")"
+OUTPUT="$OUT_DIR/1-click-timer-$VERSION$SUFFIX.zip"
 
 mkdir -p "$OUT_DIR"
 rm -f "$OUTPUT"

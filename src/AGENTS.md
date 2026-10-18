@@ -5,7 +5,7 @@ Layers, deliberately separate:
 1. **`shared/`** — what the worker and the UI must agree on: the timer protocol
    (record, reducer, storage keys), so both agree on what an action does, and the
    icon set (`icons.ts`), so the worker and the build name the same files.
-2. **`background/`** — the service worker. Framework-free TypeScript; no React.
+2. **`background/`** — Chrome's service worker or Firefox's module event page. Framework-free TypeScript; no React.
 3. **`app/runtime/`** — the contracts the UI talks to (time, and settings).
 4. **`app/`** — the React UI. Presentation only; it never keeps time itself.
 
@@ -40,6 +40,9 @@ one dial face; the multi-variant experiment is over.
 | `app/runtime/runtime.ts`            | Picks the chrome runtime in the extension, the mock in a plain browser.                                                                         |
 | `app/runtime/useTimerState.ts`      | `useSyncExternalStore` binding.                                                                                           |
 | `background/index.ts`               | Service worker: the single writer of the timer record, alarms, badge/icon, the offscreen alarm, notifications, surface focus and messages. |
+| `background/ring.ts`                | Serialized audio host: Chrome offscreen create/message/close, Firefox direct player and bounded local heartbeat. Cancels stale closure when a new ring starts. |
+| `background/notifications.ts`       | Platform options and synchronous listener registration; Chrome buttons/dismissal, Firefox click-to-focus without dismissal reset. |
+| `shared/ringPlayer.ts`              | One timed chime with idempotent cancellation and exactly one natural-completion callback. |
 | `background/badge.ts`               | The toolbar badge: whole minutes left as text, and its colour from `shared/remainingColor.ts` (the same function the dial uses). Pure (no `chrome.*`), so `npm test` covers it; the worker only applies the plan. |
 | `background/alarm.ts`               | The toolbar's alert icon: whether the alarm is ringing now (`ringingNow`) and which art the toolbar shows (`toolbarIconFor`). Pure (no `chrome.*`), the sibling `badge.ts`. |
 | `images/`                           | The icon source art: `icon.svg` (the dial) and `icon-alert.svg` (the ringing toolbar icon). The PNGs Chrome loads are rasterised from them at build time (see "Build pipeline"). |
@@ -73,7 +76,7 @@ one dial face; the multi-variant experiment is over.
 
 | Path                                          | Role                                                                       |
 | --------------------------------------------- | -------------------------------------------------------------------------- |
-| `offscreen/offscreen.ts`                      | The hidden page that plays the alarm. Imports `startChime` from `app/lib/chimes.ts`, rings for the requested seconds, then reports `ring-ended`. A `stop` silences it and cancels that end timer, so a stopped ring never reports a stale `ring-ended`. |
+| `offscreen/offscreen.ts`                      | Chrome's hidden audio host. Uses the shared timed player until `ringUntil`, then reports the matching deadline. Stop/replacement cancels the old player's completion. |
 | `images/icon-alert.svg`                       | The toolbar's alert art, shown while the alarm rings.                       |
 
 The alarm work also added `ringUntil` to the record, `alarmSeconds` to `TimerSettings`,
@@ -134,8 +137,8 @@ and the `offscreen` permission to the manifest.
   carries `data-numeral-minutes`, which is how the click is resolved
   (`handleClick` in `TimerFace`) — the pointer's position cannot identify a
   numeral because it sits off the disc.
-  `pointer-events: bounding-box` (see `TimerFace.module.css`) gives each numeral
-  a solid hit area, and hovering one takes `--preview` — the same interactive
+  A transparent SVG rectangle (see `TimerFace.module.css`) gives each numeral
+  a solid hit area in Chrome and Firefox, and hovering one takes `--preview` — the same interactive
   signal the preview arc and preview numeral use. Hovering one also previews it
   exactly as hovering the disc at that minute does (`previewMinutesAt`): the ring
   fades and the arc and preview numeral appear, so the shortcut shows what it
@@ -204,12 +207,19 @@ and the `offscreen` permission to the manifest.
   `chrome.storage.onChanged`, never by writing. `chromeRuntime` adds a 250 ms
   interval while running so the dial stays smooth.
 - **The worker owns the alarm, not the UI.** On expiry it arms the record's
-  `ringUntil` from the settings, tells the offscreen document to ring
-  (`shared/offscreen.ts`), and brings a timer surface forward. The UI plays no
+  `ringUntil` from the settings, starts the platform audio host through
+  `background/ring.ts`, and brings a timer surface forward. The UI plays no
   alarm sound at all — so there is exactly one ring, and no double sound when a
-  surface happens to be open. The notification's Stop and Restart buttons, and its
+  surface happens to be open. The Chrome notification's Stop and Restart buttons, and its
   dismissal, are handled here too, through `resolveAlarm`, so a button and the
   timer's own controls share one path.
+- **Firefox lifetime is bounded by the ring.** `ring.ts` writes a private local
+  heartbeat every 20 seconds during direct audio playback. A top-level storage
+  listener receives the events that reset Firefox's idle timer. All stop paths
+  release it. The Chrome worker never instantiates AudioContext. Completion
+  reports include the absolute `ringUntil` and are ignored if a different ring
+  is now stored. `enqueue` serializes startup/actions/expiry; onStartup is
+  registered synchronously to recover missing Firefox alarms after restart.
 - **The timer is an absolute `endTime`.** Remaining seconds are always derived,
   never accumulated, so it survives service-worker termination;
   `expireIfElapsed` resolves a run-out timer to `expired` at read time on both
@@ -231,6 +241,11 @@ and the `offscreen` permission to the manifest.
 - `manifest.test.ts` — the metadata guard: `manifest.json` and `package.json` must
   agree on the name, the version and the description, and the description must
   fit the Web Store's 132-character limit. Fix the divergence, not the test.
+- `firefoxManifest.test.ts`, `background/{index,ring,notifications}.test.ts` and
+  `shared/ringPlayer.test.ts` cover target metadata, recovery, cancellation,
+  lifetime cleanup, and notification differences.
+- `app/TimerFace.interaction.test.tsx` runs in Chromium and Firefox; it exercises
+  the transparent numeral hit area and 0-to-reset with real pointer events.
 - `app/TimerApp.visual.test.tsx` — browser project; baselines live in
   `app/__screenshots__/` (`npm run test:visual`, `test:visual:update` to rewrite).
   It also measures the rendered readout with `getBBox()` and asserts it fits
@@ -241,8 +256,11 @@ and the `offscreen` permission to the manifest.
 
 `vite.config.ts` sets `root: src`, so dev URLs match the built extension. Vite
 bundles `popup.html`, `fullscreen.html`, `settings.html`, `offscreen.html` and
-`background/index.ts`, then the `extensionAssets` plugin copies `manifest.json`
-and `images/` into `dist/`.
+`background/index.ts`, then the `extensionAssets` plugin writes the selected
+manifest and copies `images/`. The default target is Chrome in `dist/`.
+Firefox mode writes `dist-firefox/`, transforms the manifest through
+`scripts/manifest/firefox.ts`, and omits `offscreen.html`. Every plugin receives
+the selected directory and manifest so builds cannot overwrite the other target.
 
 The `iconAssets` plugin runs alongside it: it rasterises `images/icon.svg` into
 `images/icon<n>.png` for every size in `ICON_SIZES` (`scripts/icons/render.ts`),

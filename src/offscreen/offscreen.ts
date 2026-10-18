@@ -9,23 +9,20 @@
  * anything having to wake on a schedule.
  */
 
-import { startChime } from '../app/lib/chimes'
+import { resumeAudio } from '../app/lib/chimes'
+import { playRing } from '../shared/ringPlayer'
 import { isOffscreenMessage, WORKER_TARGET, type RingEndedMessage } from '../shared/offscreen'
 
 let stopRing: (() => void) | null = null
-let ringTimeout: number | null = null
+let generation = 0
 
 function silence(): void {
     stopRing?.()
     stopRing = null
-    if (ringTimeout !== null) {
-        window.clearTimeout(ringTimeout)
-        ringTimeout = null
-    }
 }
 
-function reportEnded(): void {
-    const message: RingEndedMessage = { target: WORKER_TARGET, type: 'ring-ended' }
+function reportEnded(ringUntil: number): void {
+    const message: RingEndedMessage = { target: WORKER_TARGET, type: 'ring-ended', ringUntil }
     void chrome.runtime.sendMessage(message).catch(() => {
         // The worker is gone; nothing left to update.
     })
@@ -33,6 +30,7 @@ function reportEnded(): void {
 
 chrome.runtime.onMessage.addListener((message: unknown) => {
     if (!isOffscreenMessage(message)) return
+    const current = ++generation
 
     if (message.type === 'stop') {
         silence()
@@ -40,10 +38,23 @@ chrome.runtime.onMessage.addListener((message: unknown) => {
     }
 
     silence()
-    stopRing = startChime(message.chime, message.volume)
-    ringTimeout = window.setTimeout(() => {
-        ringTimeout = null
-        silence()
-        reportEnded()
-    }, message.seconds * 1000)
+    void (async () => {
+        try {
+            await resumeAudio()
+            if (current !== generation) return
+            stopRing = playRing({
+                chime: message.chime,
+                volume: message.volume,
+                seconds: Math.max(0, (message.ringUntil - Date.now()) / 1000),
+                onEnded: () => {
+                    if (current !== generation) return
+                    stopRing = null
+                    reportEnded(message.ringUntil)
+                },
+            })
+        } catch (error) {
+            console.warn('Could not play alarm:', error)
+            if (current === generation) reportEnded(message.ringUntil)
+        }
+    })()
 })

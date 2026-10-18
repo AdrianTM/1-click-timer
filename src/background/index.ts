@@ -1,5 +1,5 @@
 /**
- * 1-click timer — Manifest V3 service worker.
+ * 1-click timer — Chrome MV3 worker / Firefox MV3 event page.
  *
  * The worker is the single writer of the timer record in `chrome.storage.local`:
  * it applies every UI action, schedules the alarms, paints the toolbar badge and
@@ -12,13 +12,7 @@
 
 import { DEFAULT_SETTINGS, normalizeSettings, SETTINGS_STORAGE_KEY, type TimerSettings } from '../app/runtime/settings'
 import { alertIconPathFor, iconPathFor } from '../shared/icons'
-import {
-    isRingEndedMessage,
-    OFFSCREEN_DOCUMENT_PATH,
-    OFFSCREEN_TARGET,
-    type RingMessage,
-    type StopMessage,
-} from '../shared/offscreen'
+import { isRingEndedMessage } from '../shared/offscreen'
 import {
     expireIfElapsed,
     isTimerRequest,
@@ -34,6 +28,8 @@ import {
 import { revealSurface, TIMER_PAGES } from '../shared/surfaces'
 import { ringingNow, toolbarIconFor, type ToolbarIcon } from './alarm'
 import { badgePlanFor } from './badge'
+import { createNotifications } from './notifications'
+import { createRingController } from './ring'
 
 const LOG_PREFIX = '[1-click-timer:sw]'
 
@@ -41,12 +37,10 @@ const TICK_ALARM = '1ct-tick'
 const TIMEUP_ALARM = '1ct-timeup'
 const NOTIFICATION_ID = '1ct-timeup'
 
-/** 30 s is the shortest repeating alarm Chrome allows; the badge is minute-accurate. */
+/** Chrome 120+ allows 30 s; 116–119 may clamp to 1 min. The badge uses minutes. */
 const TICK_PERIOD_MINUTES = 0.5
 
 const BASE_TITLE = '1-click timer'
-
-const OFFSCREEN_URL = chrome.runtime.getURL(OFFSCREEN_DOCUMENT_PATH)
 
 /**
  * The toolbar icon, in both the 1x and the 2x size, so Chrome picks the file
@@ -70,16 +64,39 @@ const ALERT_ICON: Record<number, string> = {
 /** The icon the "time is up" notification carries. */
 const NOTIFICATION_ICON = iconPathFor(128)
 
-/**
- * The "time is up" notification's action buttons, each with the timer action its
- * click applies. Chrome allows at most two. The order here is the order the OS
- * lays them out, and the `buttonIndex` `onButtonClicked` reports
- * (AGENTS.md "Notification").
- */
-const NOTIFICATION_BUTTONS: ReadonlyArray<{ title: string; action: TimerAction }> = [
-    { title: 'Stop', action: 'reset' },
-    { title: 'Restart', action: 'restart' },
-]
+function reportError(error: unknown): void {
+    console.warn(LOG_PREFIX, error)
+}
+
+// Serialize startup and all state-changing events. Register listeners before any
+// asynchronous initialization so an MV3 wake cannot lose its triggering event.
+let pending = Promise.resolve()
+async function enqueue(operation: () => Promise<void>): Promise<void> {
+    const previous = pending
+    let release!: () => void
+    pending = new Promise<void>((resolve) => {
+        release = resolve
+    })
+    await previous
+    try {
+        await operation()
+    } finally {
+        release()
+    }
+}
+const ringController = createRingController((ringUntil) => {
+    void enqueue(() => handleRingEnded(ringUntil)).catch(reportError)
+}, reportError)
+const notifications = createNotifications(
+    NOTIFICATION_ID,
+    (action) => {
+        void enqueue(() => resolveAlarm(action)).catch(reportError)
+    },
+    () => {
+        void enqueue(bringSurfaceForward).catch(reportError)
+    },
+    reportError,
+)
 
 // ---- Storage --------------------------------------------------------
 
@@ -213,130 +230,36 @@ async function syncAlarms(record: TimerRecord): Promise<void> {
     }
 }
 
-// ---- Notification ---------------------------------------------------
-
-/**
- * Set synchronously when a notification button is pressed. The press dismisses
- * the notice, which fires `onClosed` right after `onButtonClicked`; this flag
- * keeps that close from also running the close handler — which would, for
- * Restart, immediately undo the timer the button just started. Reset when a
- * fresh notice is raised.
- */
-let notificationButtonHandled = false
+// ---- Notification and audio hosts ----------------------------------
 
 function notifyElapsed(record: TimerRecord, ring: boolean): void {
-    notificationButtonHandled = false
-    chrome.notifications
-        .create(NOTIFICATION_ID, {
-            type: 'basic' as chrome.notifications.TemplateType,
+    notifications.show(
+        {
+            type: 'basic',
             iconUrl: chrome.runtime.getURL(NOTIFICATION_ICON),
             title: BASE_TITLE,
             message: `Time is up — ${describeDuration(record.durationSeconds)}.`,
-            // With no surface open the notification is the only control, so it
-            // stays put until the user acts: closing it stops the alarm and
-            // resets the timer, and clicking it brings the timer to the front.
-            priority: 2,
-            requireInteraction: true,
-            // Stop and Restart — the same two choices the timer's own controls
-            // offer, without needing a surface.
-            buttons: NOTIFICATION_BUTTONS.map(({ title }) => ({ title })),
-            // Suppress the system sound only when our own chime is playing.
-            silent: ring,
-        })
-        .catch((error: Error) => {
-            console.warn(LOG_PREFIX, 'notification failed:', error.message)
-        })
+        },
+        ring,
+    )
 }
 
 function clearNotification(): void {
-    chrome.notifications.clear(NOTIFICATION_ID).catch((error: Error) => {
-        console.warn(LOG_PREFIX, 'notification clear failed:', error.message)
-    })
+    notifications.clear()
 }
 
-// ---- Offscreen audio ------------------------------------------------
-
-/**
- * How long to wait before closing the offscreen document after silencing it.
- * Long enough for the chime's own fade to finish (`chimes.ts` fades the master
- * gain out over ~200 ms), because tearing the document down mid-fade clicks.
- */
-const OFFSCREEN_CLOSE_DELAY_MS = 300
-
-let creatingOffscreen: Promise<void> | null = null
-
-async function hasOffscreenDocument(): Promise<boolean> {
-    const contexts = await chrome.runtime.getContexts({
-        contextTypes: ['OFFSCREEN_DOCUMENT'],
-        documentUrls: [OFFSCREEN_URL],
-    })
-    return contexts.length > 0
-}
-
-/** Creates the alarm's offscreen document if it is not already open. */
-async function ensureOffscreenDocument(): Promise<void> {
-    if (await hasOffscreenDocument()) return
-    if (creatingOffscreen === null) {
-        creatingOffscreen = chrome.offscreen.createDocument({
-            url: OFFSCREEN_DOCUMENT_PATH,
-            reasons: ['AUDIO_PLAYBACK' as chrome.offscreen.Reason],
-            justification: 'Play the alarm chime when the countdown ends, even with no timer surface open.',
-        })
-    }
-    try {
-        await creatingOffscreen
-    } finally {
-        creatingOffscreen = null
-    }
-}
-
-/** Tells the offscreen document to ring out the record's remaining ring time. */
 async function startRing(record: TimerRecord, settings: TimerSettings): Promise<void> {
-    if (record.ringUntil === null) return
-    const seconds = Math.max(1, Math.round((record.ringUntil - Date.now()) / 1000))
     try {
-        await ensureOffscreenDocument()
-        const message: RingMessage = {
-            target: OFFSCREEN_TARGET,
-            type: 'ring',
-            chime: settings.chime,
-            volume: settings.volume,
-            seconds,
-        }
-        await chrome.runtime.sendMessage(message)
+        await ringController.start(record, settings)
     } catch (error) {
-        console.warn(LOG_PREFIX, 'could not start the alarm:', (error as Error).message)
+        reportError(error)
+        await ringController.stop().catch(reportError)
+        if (record.ringUntil !== null) await handleRingEnded(record.ringUntil)
     }
 }
 
-/**
- * Closes the offscreen document once the chime's fade has finished, so the
- * extension is not left holding an audio-capable page after the alarm is done.
- * A document that outlives its ring only lingers: Chrome keeps an
- * `AUDIO_PLAYBACK` document for 30 s without audio, and the page's own ring-end
- * timer would wake the worker for a ring that is already over.
- */
-function scheduleOffscreenClose(): void {
-    setTimeout(() => {
-        void chrome.offscreen.closeDocument().catch(() => {
-            // Nothing open to close: already gone, or never created.
-        })
-    }, OFFSCREEN_CLOSE_DELAY_MS)
-}
-
-/**
- * Silences the alarm and schedules the offscreen document to close, so the
- * extension is idle once the alarm has been acknowledged.
- */
 async function stopRing(): Promise<void> {
-    try {
-        if (!(await hasOffscreenDocument())) return
-        const message: StopMessage = { target: OFFSCREEN_TARGET, type: 'stop' }
-        await chrome.runtime.sendMessage(message)
-    } catch (error) {
-        console.warn(LOG_PREFIX, 'could not stop the alarm:', (error as Error).message)
-    }
-    scheduleOffscreenClose()
+    await ringController.stop().catch(reportError)
 }
 
 // ---- Surfaces -------------------------------------------------------
@@ -393,7 +316,7 @@ async function handleTimeup(): Promise<void> {
             await startRing(record, settings)
             await bringSurfaceForward()
         }
-        await updateBadge(record)
+        await updateBadge(await readRecord())
     } finally {
         handlingTimeup = false
     }
@@ -409,12 +332,12 @@ async function handleTick(): Promise<void> {
 }
 
 /** The offscreen document finished its ring on its own: drop the alert. */
-async function handleRingEnded(): Promise<void> {
+async function handleRingEnded(ringUntil: number): Promise<void> {
     const record = await readRecord()
     // Nothing left to silence — the page already stopped — but close it so the
     // extension is not left holding an audio-capable document.
-    scheduleOffscreenClose()
-    if (record.ringUntil === null) return
+    if (record.ringUntil !== ringUntil) return
+    await stopRing()
     const next: TimerRecord = { ...record, ringUntil: null }
     await writeRecord(next)
     await updateBadge(next)
@@ -464,7 +387,7 @@ chrome.runtime.onMessage.addListener(
     ): boolean => {
         // The offscreen document reporting it stopped ringing.
         if (isRingEndedMessage(message)) {
-            void handleRingEnded()
+            void enqueue(() => handleRingEnded(message.ringUntil)).catch(reportError)
             return false
         }
         // Anything else that is not a timer action (e.g. our own message to the
@@ -472,7 +395,7 @@ chrome.runtime.onMessage.addListener(
         if (!isTimerRequest(message)) return false
         void (async () => {
             try {
-                await applyAction(message)
+                await enqueue(() => applyAction(message))
                 sendResponse({ ok: true })
             } catch (error) {
                 const failure = error as Error
@@ -487,41 +410,10 @@ chrome.runtime.onMessage.addListener(
 chrome.alarms.onAlarm.addListener((alarm) => {
     console.log(LOG_PREFIX, 'alarm fired:', alarm.name)
     if (alarm.name === TIMEUP_ALARM) {
-        void handleTimeup()
+        void enqueue(handleTimeup).catch(reportError)
     } else if (alarm.name === TICK_ALARM) {
-        void handleTick()
+        void enqueue(handleTick).catch(reportError)
     }
-})
-
-chrome.notifications.onClicked.addListener(() => {
-    console.log(LOG_PREFIX, 'notification clicked → bring the timer forward')
-    void bringSurfaceForward()
-})
-
-chrome.notifications.onButtonClicked.addListener((notificationId, buttonIndex) => {
-    if (notificationId !== NOTIFICATION_ID) return
-    const button = NOTIFICATION_BUTTONS[buttonIndex]
-    if (button === undefined) return
-    // Set before the async work so the close that follows the press is swallowed.
-    notificationButtonHandled = true
-    console.log(LOG_PREFIX, `notification button → ${button.title}`)
-    void resolveAlarm(button.action)
-})
-
-chrome.notifications.onClosed.addListener((notificationId, byUser) => {
-    if (notificationId !== NOTIFICATION_ID) return
-    // A button press dismisses the notice too. It has already acted (Stop or
-    // Restart), so swallow the close that follows instead of resetting over it.
-    // `onButtonClicked` fires first, so the flag is already set.
-    if (notificationButtonHandled) {
-        notificationButtonHandled = false
-        return
-    }
-    // `byUser` is false when the extension itself clears the notification, so
-    // only a real dismissal resets the timer.
-    if (!byUser) return
-    console.log(LOG_PREFIX, 'notification dismissed → stop the alarm and reset')
-    void resolveAlarm('reset')
 })
 
 // ---- Startup --------------------------------------------------------
@@ -538,7 +430,9 @@ async function startup(): Promise<void> {
         return
     }
 
-    const record = disarmRing(resolved)
+    const disarmed = disarmRing(resolved)
+    const record =
+        disarmed.ringUntil !== null && disarmed.ringUntil <= now ? { ...disarmed, ringUntil: null } : disarmed
     await writeRecord(record)
     await syncAlarms(record)
 
@@ -550,7 +444,19 @@ async function startup(): Promise<void> {
         await stopRing()
     }
 
-    await updateBadge(record)
+    await updateBadge(await readRecord())
 }
 
-void startup()
+// Firefox loses alarms on browser shutdown. This listener wakes its event page
+// even if no timer surface is opened; initialization itself runs once per host.
+let initialization: Promise<void> | undefined
+function initialize(): Promise<void> {
+    initialization ??= enqueue(startup)
+    return initialization
+}
+chrome.runtime.onStartup.addListener(() => {
+    void initialize().catch(reportError)
+})
+// A received storage event keeps the Firefox audio host alive during its ring.
+chrome.storage.onChanged.addListener(() => {})
+void initialize().catch(reportError)

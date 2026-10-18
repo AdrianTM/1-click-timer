@@ -1,9 +1,9 @@
 # 1-click timer
 
-A countdown timer for Chrome that you set in a single click. Hover the dial, click,
+A countdown timer for Chrome and Firefox that you set in a single click. Hover the dial, click,
 and it starts — no typing and no numbers to enter.
 
-It keeps counting when you close the popup and when you restart Chrome. The minutes
+It keeps counting when you close the popup and when you restart your browser. The minutes
 left stay on the toolbar badge, and when the time is up an alarm rings and a
 notification tells you — even when no timer is on screen.
 
@@ -25,6 +25,13 @@ source — see [CONTRIBUTING.md](CONTRIBUTING.md).
 bring an open timer tab to the front when the alarm rings.
 
 To run the current source instead, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Firefox 140 or newer is supported by the source build; it is not yet published on
+AMO. See [CONTRIBUTING.md](CONTRIBUTING.md) for temporary installation and packaging.
+Firefox notifications have no Stop/Restart buttons and may disappear automatically.
+Click the notification to open the timer and use its controls. Closing a Firefox
+notification leaves the alarm ringing for its configured length; a system sound
+may accompany the chime.
 
 ## How to use
 
@@ -63,7 +70,7 @@ to normal when it stops.
 A notification appears, and the timer window — or a new one, if none is open —
 comes to the front so you can see what is ringing.
 
-To silence the alarm you can use the notification's own buttons: **Stop**, and
+In Chrome, to silence the alarm you can use the notification's own buttons: **Stop**, and
 **Restart**. Stop silences the alarm and resets the timer — exactly what closing
 the notification does. Restart silences it too, and immediately starts a new
 countdown of the same length. The timer's own controls do the same: the restart
@@ -91,16 +98,17 @@ The gear opens the settings screen in a new tab:
 - **Alarm** — the volume, a choice of chime (Chime, Beep, Bell or Silent) with a preview button, and how long the alarm rings (5 seconds to 5 minutes)
 - **Reset to defaults**
 
-Your settings sync across your own Chrome profiles.
+Your settings sync through your browser account when extension sync is enabled.
+Chrome and Firefox keep separate settings and timers.
 
 ## Features
 
 - One click to start: hover the dial to preview a duration, click to set it
 - Or click a numeral to start that many minutes
-- Keeps counting when you close the popup or restart Chrome
+- Keeps counting when you close the popup or restart your browser
 - Remaining minutes on the toolbar badge, moving from green through orange to red as time runs out
 - An alarm that rings for a length you choose and sounds even with the popup closed
-- A notification with **Stop** and **Restart** buttons, plus the timer brought to the front, so it is clear what is ringing and how to stop or repeat it
+- A notification (with **Stop** and **Restart** buttons in Chrome), plus the timer brought to the front, so it is clear what is ringing and how to stop or repeat it
 - Light and dark appearance, following your system by default
 - A remaining-time colour of your choice — a conic sweep frozen when the timer starts, a gradient that follows the time left, red, or green
 - A full-screen view for a timer you can watch from across the room
@@ -111,12 +119,12 @@ background extension about once a minute.
 ## Privacy
 
 No account, no sign-in, no analytics and no network requests. The timer and your
-preferences stay on your device, and preferences sync through your own Chrome
-profile.
+preferences stay on your device, and preferences sync through your own browser
+account when you enable sync.
 
-The extension asks for four permissions, and for no access to the pages you visit:
+The extension asks for no access to the pages you visit:
 `alarms` to fire the alert at the right moment, `notifications` for the "time is
-up" alert, `storage` to remember the timer and your settings, and `offscreen` to
+up" alert, `storage` to remember the timer and your settings, and (in Chrome) `offscreen` to
 play the alarm sound from a hidden page, so the alarm can ring with no timer
 window open.
 

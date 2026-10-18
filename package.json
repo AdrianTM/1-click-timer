@@ -5,6 +5,11 @@
     "scripts": {
         "dev": "vite",
         "build": "vite build",
+        "build:firefox": "vite build --mode firefox",
+        "lint:firefox": "web-ext lint -s dist-firefox",
+        "dev:firefox": "npm run build:firefox && web-ext run -s dist-firefox",
+        "package:firefox": "bash scripts/package.sh firefox",
+        "deploy:firefox": "npm run lint && npm run typecheck && npm test && npm run build:firefox && npm run lint:firefox && npm run package:firefox",
         "preview": "vite preview",
         "deploy": "npm run lint && npm run typecheck && npm test && npm run build && bash scripts/package.sh",
         "release": "npm run deploy && node scripts/store/capture.mjs",
@@ -16,6 +21,7 @@
         "test": "vitest run --project unit",
         "test:watch": "vitest --project unit",
         "test:visual": "vitest run --project visual",
+        "test:interaction": "vitest run --project interaction",
         "test:visual:update": "vitest run --project visual --update",
         "screenshots": "npm run build && node scripts/store/capture.mjs"
     },
@@ -59,7 +65,8 @@
         "typescript-eslint": "^8.71.1",
         "vite": "^8.1.0",
         "vitest": "^5.0.3",
-        "vitest-browser-react": "^2.3.0"
+        "vitest-browser-react": "^2.3.0",
+        "web-ext": "^10.8.0"
     },
     "dependencies": {
         "lucide-react": "^1.55.0",

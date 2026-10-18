@@ -1,19 +1,22 @@
 # Privacy Policy for 1-click timer
 
-Last updated: 11 October 2026
+Last updated: 17 October 2026
 
-1-click timer is a Chrome extension by Alex Ewerlöf. It is a countdown timer and
+1-click timer is a Chrome and Firefox extension by Alex Ewerlöf. It is a countdown timer and
 nothing else: it does not collect, sell or share personal data. There are no
 accounts, no analytics and no telemetry.
 
 ## What the extension stores
 
-Two things, both of them yours:
+The extension stores:
 
 - **The timer** — when it ends, how long it was set for, and whether it is
   running, paused or finished.
 - **Your preferences** — appearance (light, dark or device), alarm volume, chosen
   chime, mute, and the colour you picked for the remaining time.
+- **A local alarm heartbeat in Firefox** — a changing internal marker written
+  while the alarm rings, so its audio keeps playing. It contains no personal
+  information and is never synced or transmitted by the extension.
 
 That is the complete list. The extension does not read your browsing history, the
 pages you visit, what you type, or anything else.
@@ -22,19 +25,19 @@ pages you visit, what you type, or anything else.
 
 The timer is kept in your browser's local extension storage, on your own device.
 
-Your preferences are kept in Chrome's _synced_ extension storage. If you are
-signed in to Chrome, Google syncs that data through your own Google Account so
-your settings follow you to your other computers. That transfer is between you
-and Google, under
-[Google's privacy policy](https://policies.google.com/privacy), and it is part of
-your own account settings — the extension's author never receives it and has no
-way to read it. You can turn syncing off, or clear the synced data, at any time in
-Chrome's settings.
+Your preferences use your browser's synced extension storage, with local storage
+as a fallback. If you enable browser sync, Google (Chrome) or Mozilla (Firefox)
+may sync preferences through your own browser account. Chrome and Firefox data
+remain separate. This is managed by your browser under
+[Google's privacy policy](https://policies.google.com/privacy) or
+[Mozilla's privacy notice](https://www.mozilla.org/privacy/firefox/).
+The extension's author never receives it and has no way to read it. You can
+manage syncing and synced data in your browser's settings.
 
 ## How it is used
 
 Only to run the timer and to draw it the way you asked: showing the remaining
-minutes on the toolbar badge, restoring a running timer after Chrome restarts, and
+minutes on the toolbar badge, restoring a running timer after your browser restarts, and
 playing the alarm you chose.
 
 ## Third-party services
@@ -56,8 +59,8 @@ access to any of the data described above.
 
 Stored data is kept only until you remove it:
 
-- Uninstalling the extension deletes the locally stored timer.
-- Synced preferences can be cleared in Chrome's own settings, or by switching off
+- Uninstalling the extension deletes the locally stored timer and alarm marker.
+- Synced preferences can be managed in your browser's own settings, including switching off
   syncing for extensions.
 
 ## Changes to this policy

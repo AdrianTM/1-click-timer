@@ -20,13 +20,13 @@ export const OFFSCREEN_TARGET = 'offscreen'
 /** Addresses the service worker. */
 export const WORKER_TARGET = 'worker'
 
-/** Start ringing `chime` at `volume`, stopping on its own after `seconds`. */
+/** Start ringing until an absolute deadline, also used to identify its completion. */
 export interface RingMessage {
     target: typeof OFFSCREEN_TARGET
     type: 'ring'
     chime: ChimeId
     volume: number
-    seconds: number
+    ringUntil: number
 }
 
 /** Stop ringing now (dismissed, reset, restarted or muted). */
@@ -41,6 +41,7 @@ export type OffscreenMessage = RingMessage | StopMessage
 export interface RingEndedMessage {
     target: typeof WORKER_TARGET
     type: 'ring-ended'
+    ringUntil: number
 }
 
 function hasTarget(value: unknown, target: string): value is Record<string, unknown> {
@@ -54,5 +55,5 @@ export function isOffscreenMessage(value: unknown): value is OffscreenMessage {
 }
 
 export function isRingEndedMessage(value: unknown): value is RingEndedMessage {
-    return hasTarget(value, WORKER_TARGET) && value.type === 'ring-ended'
+    return hasTarget(value, WORKER_TARGET) && value.type === 'ring-ended' && typeof value.ringUntil === 'number'
 }

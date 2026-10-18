@@ -76,7 +76,27 @@ function context(): AudioContext | null {
  */
 export function primeAudio(): void {
     const ctx = context()
-    if (ctx && ctx.state === 'suspended') void ctx.resume()
+    if (ctx && ctx.state === 'suspended') void ctx.resume().catch(console.warn)
+}
+
+/** Alarm hosts must observe audio failures rather than claim a silent ring succeeded. */
+export async function resumeAudio(): Promise<void> {
+    const ctx = context()
+    if (!ctx) throw new Error('Web Audio is unavailable')
+    // An autoplay policy can leave resume() pending indefinitely. Do not let
+    // that block the background's serialized timer actions (including Stop).
+    let timeout: ReturnType<typeof setTimeout> | undefined
+    try {
+        await Promise.race([
+            ctx.resume(),
+            new Promise<never>((_resolve, reject) => {
+                timeout = setTimeout(() => reject(new Error('AudioContext resume timed out')), 5000)
+            }),
+        ])
+        if (ctx.state !== 'running') throw new Error(`AudioContext is ${ctx.state}`)
+    } finally {
+        clearTimeout(timeout)
+    }
 }
 
 function scheduleNote(ctx: AudioContext, destination: AudioNode, note: Note): void {
@@ -110,7 +130,7 @@ export function startChime(chime: ChimeId, volume: number): () => void {
     if (chime === 'silent' || volume <= 0) return () => {}
     const ctx = context()
     if (!ctx) return () => {}
-    void ctx.resume()
+    void ctx.resume().catch(console.warn)
 
     const master = openOutput(ctx, volume)
     const motif = MOTIFS[chime]
@@ -132,7 +152,7 @@ export function previewChime(chime: ChimeId, volume: number): void {
     if (chime === 'silent' || volume <= 0) return
     const ctx = context()
     if (!ctx) return
-    void ctx.resume()
+    void ctx.resume().catch(console.warn)
 
     const master = openOutput(ctx, volume)
     for (const note of MOTIFS[chime]) scheduleNote(ctx, master, note)

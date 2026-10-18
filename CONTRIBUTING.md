@@ -9,6 +9,7 @@ anything large, so we can agree on the approach before you write it.
 
 - Node.js ≥ 22.13 (see `engines` in `package.json`)
 - Chrome, for loading the built extension
+- Firefox 140 or newer, for the Firefox target
 
 ## Set up
 
@@ -33,6 +34,11 @@ loop a fast way to work on the interface.
 | `npm install`                | install dependencies                               |
 | `npm run dev`                | Vite dev server → `/popup.html`, `/fullscreen.html`, `/settings.html` |
 | `npm run build`              | build the unpacked extension into `dist/`          |
+| `npm run build:firefox`      | build the Firefox extension into `dist-firefox/` |
+| `npm run lint:firefox`       | validate `dist-firefox/` with Mozilla web-ext |
+| `npm run dev:firefox`        | build and temporarily load the extension in Firefox; rebuild after source edits |
+| `npm run package:firefox`    | ZIP the existing Firefox build into `dashboard/package/` |
+| `npm run deploy:firefox`     | lint + typecheck + unit tests + Firefox build + web-ext lint + Firefox ZIP |
 | `npm run deploy`             | lint + typecheck + test + build, then ZIP the release into `dashboard/package/` |
 | `npm run release`            | `deploy`, then capture the store gallery (needs Playwright's Chromium) |
 | `npm run lint`               | ESLint (flat config)                               |
@@ -40,6 +46,7 @@ loop a fast way to work on the interface.
 | `npm run typecheck`          | `tsc --noEmit`                                     |
 | `npm test`                   | unit tests (node)                                  |
 | `npm run test:visual`        | browser-mode visual tests (screenshot diff)        |
+| `npm run test:interaction`   | numeral hit-target interactions in Chromium and Firefox |
 | `npm run test:visual:update` | rewrite the screenshot baselines                   |
 | `npm run screenshots`        | build, then capture the store gallery into `dashboard/screenshots/` |
 | `npm run format`             | Prettier write                                     |
@@ -156,3 +163,92 @@ reproducible on demand, and never a gallery that lies about the current interfac
 
 Debug logs are prefixed `[1-click-timer:sw]`. Read them from the service worker's
 inspector, on the extension's card.
+
+## Try it in Firefox
+
+Run `npm run dev:firefox`, or build the Firefox target and open
+`about:debugging` → This Firefox → Load Temporary Add-on, selecting
+`dist-firefox/manifest.json`. Temporary installations disappear at browser exit.
+Use the same `npm run dev` design preview for either browser.
+
+Firefox runs the background as a non-persistent module event page. It plays Web
+Audio there; Chrome retains its offscreen document. During a Firefox ring only,
+a local heartbeat every 20 seconds generates a storage event to prevent the audio
+host from idling. Stop/restart/mute, natural completion and failures clear the
+heartbeat. The persisted `ringUntil` deadline bounds recovery after host loss.
+Keep the background debugger closed when checking this behavior: a debugger can
+mask lifecycle failures. Check both 60-second and 300-second rings.
+
+Firefox notifications omit unsupported buttons and Chrome-only options. Clicking
+one focuses the timer. Closing or timing out a notice does not reset the timer,
+because Firefox does not report whether the user or system closed it. Use the
+timer's Stop/Restart controls; the chosen ring duration still stops the sound.
+An OS sound may accompany the chime. Firefox alarms are recreated on browser
+startup. Badge ticks use 30 seconds where supported; Chrome 116–119 may clamp
+them to one minute. Countdown expiry uses its own absolute alarm.
+
+For genuine browser-restart tests use a signed test build or a Firefox development
+build configured to permit unsigned permanent add-ons. Reinstalling a temporary
+add-on is not equivalent. Check a running timer across restart, expiry while
+closed, sleep/wake, event-page suspension, tab focus across windows and settings
+persistence with and without a Firefox Account.
+
+## Firefox release (AMO)
+
+`npm run deploy:firefox` writes
+`dashboard/package/1-click-timer-<version>-firefox.zip`, with `manifest.json` at
+the archive root. The default Chrome build/release/gallery commands still target
+`dist/`. Builds may be run in either order; output directories are separate.
+
+The generated manifest removes Chrome's worker and offscreen permission, adds a
+module event page, and declares the permanent add-on ID
+`{1e399e5e-c937-434a-b288-ebacad6f64ba}`. Do not change it after publication.
+Firefox 140 is the minimum for the AMO-required data-disclosure manifest field;
+Firefox 127 rejects that field during installation. The surface discovery API
+itself is available from 127. No `tabs` or host permissions are required.
+
+Submit the Firefox ZIP manually to addons.mozilla.org. Normal distribution,
+including self-distribution, requires Mozilla signing. Select desktop Firefox;
+Android is outside this port. No AMO listing or signed download is published by
+these commands. The manifest's `data_collection_permissions.required: ['none']`
+declares that the extension collects no user data; browser-managed settings sync
+is separate from collection by the extension author. See `PRIVACY.md`.
+
+For Mozilla's source review, provide a source archive containing the TypeScript,
+HTML/CSS/SVG, build scripts/configs, `package.json` and `package-lock.json`, with
+Node >=22.13 and the exact commands `npm ci` and `npm run build:firefox`.
+Exclude dependencies, generated output, credentials and VCS metadata. Record the
+actual Node/npm versions used to build the submitted ZIP. AMO's review may ask
+for this source because Vite bundles the application and React.
+
+`web-ext lint` must have no errors. Review warnings rather than suppressing them:
+Android's disclosure support starts at 142 (Android is outside this port), guarded
+Chrome offscreen calls remain in shared code, and bundled React contains internal
+`innerHTML` assignments. Recheck these warnings with each web-ext update.
+
+### Port validation (2026-10-17)
+
+The port was checked with Node 22.23.0 and npm 10.9.8: lint, typecheck, 151 unit
+tests, both build/package flows, and four real-pointer interaction checks across
+Chromium and Firefox. The Firefox package passed web-ext 10.8.0 with no errors
+and six warnings described above.
+
+An isolated Firefox 158 profile, with the add-on debugger closed and no timer
+surface initially open, completed a 300-second alarm. Web Audio entered its
+running state and kept scheduling notes through all 14 heartbeats, then stopped
+at the persisted deadline and cleared `ringUntil`. Chromium's real extension
+test checked offscreen creation, natural completion/closure, restart and reset.
+
+The Chrome visual suite has seven pre-existing failures here (six text screenshot
+comparisons and the readout fit assertion). An untouched HEAD checkout reproduces
+all seven, and the six actual screenshots are byte-identical between that
+checkout and the port. The committed baselines were preserved.
+
+Firefox 140 accepted the final disclosure-bearing manifest and completed a
+60-second ring, stopping its audio and clearing the ringing record at the
+deadline. Firefox 127 could only load a test copy with that disclosure removed,
+which is why the AMO-ready build declares 140 as its floor.
+
+Native notification interactions, signed-install browser restart, OS sleep/wake,
+and settings sync through a signed-in Firefox Account still need manual checks
+before publishing. A temporary-install smoke test does not establish those.

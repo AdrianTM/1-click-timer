@@ -38,7 +38,9 @@ loop a fast way to work on the interface.
 | `npm run lint:firefox`       | validate `dist-firefox/` with Mozilla web-ext |
 | `npm run dev:firefox`        | build and temporarily load the extension in Firefox; rebuild after source edits |
 | `npm run package:firefox`    | ZIP the existing Firefox build into `dashboard/package/` |
+| `npm run source:firefox`     | create the AMO reviewer source ZIP with exact build instructions (Python 3 + Git) |
 | `npm run deploy:firefox`     | lint + typecheck + unit tests + Firefox build + web-ext lint + Firefox ZIP |
+| `npm run release:firefox`    | Firefox deploy plus the reviewer source ZIP |
 | `npm run deploy`             | lint + typecheck + test + build, then ZIP the release into `dashboard/package/` |
 | `npm run release`            | `deploy`, then capture the store gallery (needs Playwright's Chromium) |
 | `npm run lint`               | ESLint (flat config)                               |
@@ -194,6 +196,11 @@ closed, sleep/wake, event-page suspension, tab focus across windows and settings
 persistence with and without a Firefox Account.
 
 ## Firefox release (AMO)
+
+`FIREFOXAMO.md` contains the Firefox listing copy, permission explanations,
+reviewer notes and submission checklist. Run `npm run release:firefox` to prepare
+both upload archives; the source packaging step needs Python 3 and Git. These
+commands create local artifacts and do not submit or publish to AMO.
 
 `npm run deploy:firefox` writes
 `dashboard/package/1-click-timer-<version>-firefox.zip`, with `manifest.json` at

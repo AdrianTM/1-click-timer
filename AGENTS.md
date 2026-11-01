@@ -47,6 +47,7 @@ plus reset.
 | `README.md`         | users      | what it is, who it is for, installing it, the how-tos, privacy and links                                       |
 | `CONTRIBUTING.md`   | developers | setup, every command, the layout, testing, conventions and the release process                                 |
 | `CHROMEWEBSTORE.md` | releasing  | the store listing copy, the per-permission justifications, the privacy disclosure and the submission checklist |
+| `FIREFOXAMO.md`     | releasing  | Firefox AMO listing copy, reviewer notes, source packaging and submission checklist |
 | `PRIVACY.md`        | users      | the privacy policy the store listing links to                                                                  |
 | `src/AGENTS.md`     | developers | the file-by-file map of `src/`, and its key patterns                                                           |
 

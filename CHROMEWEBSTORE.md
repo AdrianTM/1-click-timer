@@ -3,7 +3,8 @@
 > Last Updated: 2026-10-17
 
 Firefox development uses a separate generated manifest and release ZIP; see
-CONTRIBUTING.md for AMO instructions. Chrome's listing, permissions and capture
+FIREFOXAMO.md for listing copy and reviewer notes, and CONTRIBUTING.md for release
+commands. Chrome's listing, permissions and capture
 flow remain the same. Shared numeral hit targets now work in both browsers;
 the transparent geometry does not change store screenshots. PRIVACY.md now also
 explains Firefox's local alarm marker and browser-managed settings sync.

@@ -1,10 +1,14 @@
 # Privacy Policy for 1-click timer
 
-Last updated: 17 October 2026
+Last updated: 1 November 2026
 
 1-click timer is a Chrome and Firefox extension by Alex Ewerlöf. It is a countdown timer and
 nothing else: it does not collect, sell or share personal data. There are no
 accounts, no analytics and no telemetry.
+
+The Firefox port is maintained at
+<https://github.com/AdrianTM/1-click-timer>. Its support and privacy contact is
+<https://github.com/AdrianTM/1-click-timer/issues>.
 
 ## What the extension stores
 
@@ -70,6 +74,9 @@ changes are also noted in the release notes of the version that introduces them.
 
 ## Contact
 
-Questions about privacy? Write to
+For questions about the Firefox port, open an issue at
+<https://github.com/AdrianTM/1-click-timer/issues>.
+
+For the original Chrome extension, write to
 <hello@alexewerlof.com>, or open an issue at
 <https://github.com/alexewerlof/1-click-timer/issues>.

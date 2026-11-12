@@ -199,9 +199,14 @@ termination. The UI never accumulates time.
   **lazily, inside the seam** — a module-level singleton is evaluated in the plain
   browser too, where `chrome.storage` is undefined and the app crashes before it
   can choose the mock.
-- **Themes are `data-theme`, not components.** `useSettingsTheme` sets
-  `data-theme` on `<html>` and writes the three colour overrides as inline custom
-  properties. `tokens.css` keeps the **light** palette in `:root` and overrides it
+- **Themes are `data-theme`, not components.** Device uses Firefox toolbar colors
+  when exposed by `browser.theme`, with `prefers-color-scheme` as fallback.
+  The Firefox-only `theme` permission enables this; live updates and window focus
+  refresh the colors. Custom mode supplies saved background/text colors instead.
+  The light palette and initial custom colors match the reference Firefox toolbar:
+  cream #fdf4f4 and purple #75669f. Explicit Light/Dark clear these overrides.
+  `useSettingsTheme` sets `data-theme` on `<html>` and writes the browser surface
+  and ink as inline custom properties. `tokens.css` keeps the **light** palette in `:root` and overrides it
   in `[data-theme='dark']`; a timer surface left on Auto renders light in the
   screenshot tests, so the baselines only move if a colour actually changes.
 - **Chimes are synthesised**, not files (`app/lib/chimes.ts`) — there is no audio

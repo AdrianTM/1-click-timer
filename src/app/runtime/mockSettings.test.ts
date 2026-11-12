@@ -74,3 +74,26 @@ describe('settings', () => {
         expect(normalizeSettings({ volume: -2 }).volume).toBe(0)
     })
 })
+
+describe('custom appearance', () => {
+    it('migrates old preferences and rejects malformed stored colors', () => {
+        const old = normalizeSettings({ mode: 'device', remaining: 'green' })
+        expect(old.backgroundColor).toBe(DEFAULT_SETTINGS.backgroundColor)
+        expect(old.textColor).toBe(DEFAULT_SETTINGS.textColor)
+        const invalid = normalizeSettings({ mode: 'custom', backgroundColor: 'red', textColor: '#123' })
+        expect(invalid.backgroundColor).toBe(DEFAULT_SETTINGS.backgroundColor)
+        expect(invalid.textColor).toBe(DEFAULT_SETTINGS.textColor)
+        expect(normalizeSettings({ textColor: '#ABCDEF' }).textColor).toBe('#abcdef')
+    })
+
+    it('retains custom colors when switching modes and clears them on reset', () => {
+        const store = createMockSettings()
+        store.update({ mode: 'custom', backgroundColor: '#123456', textColor: '#abcdef' })
+        store.update({ mode: 'dark' })
+        store.update({ mode: 'custom' })
+        expect(normalizeSettings(JSON.parse(JSON.stringify(store.getState())))).toEqual(store.getState())
+        expect(store.getState().backgroundColor).toBe('#123456')
+        store.reset()
+        expect(store.getState()).toEqual(DEFAULT_SETTINGS)
+    })
+})

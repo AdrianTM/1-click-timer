@@ -20,7 +20,7 @@ describe('Firefox manifest', () => {
         const firefox = firefoxManifest(chromeManifest)
         expect(firefox).not.toHaveProperty('minimum_chrome_version')
         expect(firefox.background).toEqual({ scripts: ['js/background.js'], type: 'module' })
-        expect(firefox.permissions).toEqual(['alarms', 'notifications', 'storage'])
+        expect(firefox.permissions).toEqual(['alarms', 'notifications', 'storage', 'theme'])
         expect(firefox.browser_specific_settings.gecko).toEqual({
             id: '{1e399e5e-c937-434a-b288-ebacad6f64ba}',
             strict_min_version: '140.0',

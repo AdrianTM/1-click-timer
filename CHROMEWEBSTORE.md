@@ -1,6 +1,6 @@
 # Chrome Web Store Listing — 1-click timer
 
-> Last Updated: 2026-10-17
+> Last Updated: 2026-11-12
 
 Firefox development uses a separate generated manifest and release ZIP; see
 FIREFOXAMO.md for listing copy and reviewer notes, and CONTRIBUTING.md for release
@@ -65,6 +65,7 @@ FEATURES
 • The timer comes to the front when the time is up, so you can see and stop the alarm
 • Play, pause and stop from the corner of the dial, and restart from the control in the middle
 • Light and dark appearance, following your system by default
+• Custom background and text colors, with a cream and purple light palette
 • A remaining-time colour you can change — a conic sweep frozen when the timer starts, a gradient that follows the time left, red, or green — and a choice of alarm chimes
 • A full-screen view for a timer you can watch from across the room
 
@@ -246,6 +247,9 @@ https://github.com/alexewerlof/1-click-timer/issues
 https://www.alexewerlof.com/
 
 ## Version History
+
+9.1.0 (prepared 2026-11-12, not submitted): Custom background and text color controls, saved with
+appearance preferences. The default light palette is now cream and purple.
 
 | Version | Date       | Changes                                                                                                                                                                   | Status |
 | ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |

@@ -1,10 +1,13 @@
 # Firefox Add-ons submission — 1-click timer
 
-Prepared 2026-11-01 for version **9.0.0**. This is the Firefox port of Alex
+Prepared 2026-11-12 for version **9.1.0**. This is the Firefox port of Alex
 Ewerlöf's GPL-3.0 project, maintained in
 <https://github.com/AdrianTM/1-click-timer>. Preserve the original attribution;
-the Mozilla Account submitting this port is its publisher. No AMO listing or
-Mozilla-signed download has been created by the release commands.
+the Mozilla Account submitting this port is its publisher.
+
+Existing listing: <https://addons.mozilla.org/addon/1-click-timer-firefox/>.
+AMO reports published version **9.0.0** as of 2026-11-12. Submit **9.1.0** as
+an update to this listing; the local release commands do not publish it.
 
 ## Release files
 
@@ -13,8 +16,8 @@ checks, builds and validates Firefox, and creates these separate uploads:
 
 | File | AMO use |
 | --- | --- |
-| `dashboard/package/1-click-timer-9.0.0-firefox.zip` | Extension upload |
-| `dashboard/package/1-click-timer-9.0.0-firefox-source.zip` | Source code upload for reviewers |
+| `dashboard/package/1-click-timer-9.1.0-firefox.zip` | Extension upload |
+| `dashboard/package/1-click-timer-9.1.0-firefox-source.zip` | Source code upload for reviewers |
 | `dist-firefox/images/icon128.png` | Listing icon |
 
 The source archive contains `BUILD-FIREFOX.md` with the actual Node/npm versions
@@ -28,7 +31,7 @@ Run `npm run source:firefox` to recreate only this archive.
 | Field | Value |
 | --- | --- |
 | Name | 1-click timer |
-| Version | 9.0.0 |
+| Version | 9.1.0 |
 | Primary language | English |
 | Suggested category | Other (productivity timer) |
 | License | GNU General Public License v3.0 |
@@ -40,7 +43,7 @@ Run `npm run source:firefox` to recreate only this archive.
 
 Use an email address you monitor if AMO asks for a support email. The original
 author's address in `PRIVACY.md` is not the Firefox port maintainer's address.
-AMO assigns the listing URL; check its proposed slug for availability.
+The existing listing slug is `1-click-timer-firefox`; keep this listing for updates.
 
 ### Summary
 
@@ -62,7 +65,8 @@ then click to start. Or click a numeral to start that many minutes.
 • Bring the timer to the front when time is up.
 • Pause, resume, stop or restart from the timer's controls.
 • Open a full-screen timer you can watch from across the room.
-• Choose light, dark or system appearance, and customize the remaining-time colour.
+• Choose light, dark, Device or Custom appearance, and customize the remaining-time colour.
+• Device follows Firefox toolbar colors when available, including theme changes.
 
 When the timer finishes, click its notification to return to the timer.
 Use the timer's Stop or Restart controls to silence the alarm. Closing the
@@ -80,10 +84,10 @@ Support and source: https://github.com/AdrianTM/1-click-timer
 ### Version notes
 
 ```text
-Initial Firefox release of the modern 1-click timer: a one-click visual dial,
-background countdown, toolbar badge, configurable alarm chimes, a full-screen
-view, and light/dark appearance. Includes Firefox-specific alarm playback and
-notification behavior.
+New Custom appearance mode lets you choose and save background and text colors.
+The light palette now uses cream and purple. Device appearance follows Firefox
+toolbar colors when available, and Settings explains when and why the light/dark
+fallback is used. Your existing timer and alarm preferences are preserved.
 ```
 
 ## Permissions and privacy
@@ -93,6 +97,7 @@ notification behavior.
 | `alarms` | Wake the background timer when the countdown ends and update its badge. |
 | `notifications` | Display the time-up notification; clicking it opens or focuses the timer. |
 | `storage` | Save the countdown, preferences and a temporary local alarm heartbeat. |
+| `theme` | Read Firefox toolbar colors and follow theme changes for Device appearance. |
 
 There are no host permissions, content scripts, browsing-history access, or
 Chrome `offscreen` permission in the Firefox manifest. The data collection
@@ -111,6 +116,10 @@ requested, publish the matching policy in the fork and verify that URL loads.
 This submission is a Firefox desktop port of the GPL-3.0 project
 https://github.com/alexewerlof/1-click-timer . The maintained Firefox source is
 https://github.com/AdrianTM/1-click-timer . Original attribution and license are retained.
+
+Version 9.1.0 adds Custom background/text colors, Firefox theme matching when
+colors are exposed, and fallback status in Settings. The new theme permission
+reads browser colors; this extension never changes the browser theme.
 
 No login, test account, payment, remote service or website access is required.
 Click the toolbar icon and click a duration on the dial. Close the popup;
@@ -142,7 +151,9 @@ The runtime/background tests cover the relevant timer and alarm logic.
 
 1. Sign in to <https://addons.mozilla.org/developers/> with the publishing
    Mozilla Account, review its display name and accept the developer agreement.
-2. Choose **Submit a New Add-on** → **On this site** for a public AMO listing.
+2. For an existing listing, open **My Add-ons** → **1-click timer** →
+   **Manage Status & Versions** → **Upload a New Version**. Use **Submit a New
+   Add-on** → **On this site** only if this add-on has never been listed.
 3. Upload the extension ZIP, then review AMO's validation results. The local
    validator currently reports zero errors and six warnings explained above;
    AMO may use a different validator version.
@@ -154,6 +165,15 @@ The runtime/background tests cover the relevant timer and alarm logic.
    **Submit Version**, which sends it to Mozilla for signing/publication.
 8. Record the assigned AMO URL here after submission. For subsequent versions,
    upload through that existing listing and keep the same add-on ID.
+
+## Validation of 9.1.0 (2026-11-12)
+
+Lint, typecheck, and all 153 unit tests passed. Ten theme checks passed across
+Firefox and Chromium, including custom color inputs and Device fallback reasons;
+the settings focus-ring browser check also passed. The release build and ZIPs
+were generated successfully; web-ext reports zero errors and the six documented
+warnings. The broad timer screenshot suite was not rerun for this release; its
+previously documented failures and old palette baselines remain.
 
 ## Remaining manual release checks
 

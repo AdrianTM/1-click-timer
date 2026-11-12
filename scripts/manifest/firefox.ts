@@ -4,7 +4,7 @@ export function firefoxManifest<T extends { permissions: string[]; minimum_chrom
     delete manifest.minimum_chrome_version
     return {
         ...manifest,
-        permissions: manifest.permissions.filter((permission) => permission !== 'offscreen'),
+        permissions: [...manifest.permissions.filter((permission) => permission !== 'offscreen'), 'theme'],
         background: { scripts: ['js/background.js'], type: 'module' },
         browser_specific_settings: {
             gecko: {

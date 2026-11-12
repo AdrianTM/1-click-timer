@@ -11,10 +11,10 @@
 import { DEFAULT_ALARM_SECONDS, isAlarmSeconds, type AlarmSeconds } from '../lib/alarm'
 import { CHIME_OPTIONS, DEFAULT_CHIME, type ChimeId } from '../lib/chimes'
 
-/** Light, dark, or follow the OS preference (the default). */
-export type ThemeMode = 'light' | 'dark' | 'device'
+/** Built-in palettes, browser preference (default), or a saved custom palette. */
+export type ThemeMode = 'light' | 'dark' | 'device' | 'custom'
 
-export const THEME_MODES: readonly ThemeMode[] = ['light', 'dark', 'device']
+export const THEME_MODES: readonly ThemeMode[] = ['light', 'dark', 'device', 'custom']
 
 /**
  * How the remaining time is coloured. `gradient` tracks the time left through the
@@ -27,6 +27,8 @@ export const REMAINING_COLORS: readonly RemainingColor[] = ['gradient', 'conic',
 
 export interface TimerSettings {
     mode: ThemeMode
+    backgroundColor: string
+    textColor: string
     /** Alarm volume, 0..1. Maxed by default (AGENTS.md "Settings"). */
     volume: number
     chime: ChimeId
@@ -43,6 +45,9 @@ export interface TimerSettings {
 
 export const DEFAULT_SETTINGS: TimerSettings = {
     mode: 'device',
+    // Initial picker values mirror the screenshot palette in design/tokens.css.
+    backgroundColor: '#fdf4f4',
+    textColor: '#75669f',
     volume: 1,
     chime: DEFAULT_CHIME,
     alarmSeconds: DEFAULT_ALARM_SECONDS,
@@ -87,11 +92,17 @@ function alarmSecondsOr(value: unknown): AlarmSeconds {
     return isAlarmSeconds(value) ? value : DEFAULT_SETTINGS.alarmSeconds
 }
 
+function normalizeColor(value: unknown, fallback: string): string {
+    return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value.toLowerCase() : fallback
+}
+
 /** Coerces anything read from storage into a complete, valid settings object. */
 export function normalizeSettings(raw: unknown): TimerSettings {
     const source = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {}
     return {
         mode: isThemeMode(source.mode) ? source.mode : DEFAULT_SETTINGS.mode,
+        backgroundColor: normalizeColor(source.backgroundColor, DEFAULT_SETTINGS.backgroundColor),
+        textColor: normalizeColor(source.textColor, DEFAULT_SETTINGS.textColor),
         volume: clampVolume(source.volume),
         chime: isChime(source.chime) ? source.chime : DEFAULT_SETTINGS.chime,
         alarmSeconds: alarmSecondsOr(source.alarmSeconds),

@@ -7,6 +7,7 @@ import { AUTHOR_SITE_URL, ISSUES_URL, REPOSITORY_URL, openTab } from './lib/link
 import { isThemeMode, THEME_MODES, type SettingsStore, type ThemeMode, type TimerSettings } from './runtime/settings'
 import { useRemainingColor } from './runtime/useRemainingColor'
 import { useSettings } from './runtime/useSettings'
+import { useThemeStatus } from './runtime/themeStatus'
 import styles from './SettingsApp.module.css'
 
 export interface SettingsAppProps {
@@ -17,6 +18,7 @@ const MODE_LABELS: Record<ThemeMode, string> = {
     light: 'Light',
     dark: 'Dark',
     device: 'Device',
+    custom: 'Custom',
 }
 
 function isChimeId(value: string): value is ChimeId {
@@ -32,6 +34,7 @@ function isChimeId(value: string): value is ChimeId {
  */
 export function SettingsApp({ settingsStore }: SettingsAppProps) {
     const settings = useSettings(settingsStore)
+    const themeStatus = useThemeStatus()
     // No timer on this surface, so the remaining colour falls back to the theme's.
     useRemainingColor(settingsStore, null)
 
@@ -69,6 +72,7 @@ export function SettingsApp({ settingsStore }: SettingsAppProps) {
                     </label>
                     <select
                         id="mode"
+                        aria-describedby={settings.mode === 'device' ? 'theme-status' : undefined}
                         className={styles.select}
                         value={settings.mode}
                         onChange={(event) => {
@@ -83,6 +87,41 @@ export function SettingsApp({ settingsStore }: SettingsAppProps) {
                         ))}
                     </select>
                 </div>
+
+                {settings.mode === 'custom' && (
+                    <>
+                        <div className={styles.fieldRow}>
+                            <label className={styles.fieldLabel} htmlFor="background-color">
+                                Background
+                            </label>
+                            <input
+                                id="background-color"
+                                type="color"
+                                value={settings.backgroundColor}
+                                onChange={(event) => update({ backgroundColor: event.target.value })}
+                            />
+                            <span className={styles.value}>{settings.backgroundColor}</span>
+                        </div>
+                        <div className={styles.fieldRow}>
+                            <label className={styles.fieldLabel} htmlFor="text-color">
+                                Text
+                            </label>
+                            <input
+                                id="text-color"
+                                type="color"
+                                value={settings.textColor}
+                                onChange={(event) => update({ textColor: event.target.value })}
+                            />
+                            <span className={styles.value}>{settings.textColor}</span>
+                        </div>
+                    </>
+                )}
+
+                {settings.mode === 'device' && (
+                    <p id="theme-status" className={styles.hint} role="status">
+                        {themeStatus}
+                    </p>
+                )}
 
                 <div className={styles.fieldRow}>
                     <span className={styles.fieldLabel}>Remaining</span>

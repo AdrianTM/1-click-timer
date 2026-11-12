@@ -94,7 +94,12 @@ that tab it goes full screen. Its glyph shows which way it will go.
 
 The gear opens the settings screen in a new tab:
 
-- **Appearance** — the mode (light, dark, or device, which follows your system and is the default) and the remaining-time colour: a conic sweep frozen when the timer starts, a gradient that follows the time left, red, or green
+With Device selected, the note below Mode shows whether Firefox toolbar colors or
+the light/dark fallback are in use, and explains any fallback. Choose Custom to
+set Background and Text colors; these are saved with your preferences. The light
+palette and initial custom colors are cream (#fdf4f4) and purple (#75669f).
+
+- **Appearance** — the mode (light, dark, or device (the default), which follows Firefox’s toolbar colors when available and otherwise your preferred light/dark scheme) and the remaining-time colour: a conic sweep frozen when the timer starts, a gradient that follows the time left, red, or green
 - **Alarm** — the volume, a choice of chime (Chime, Beep, Bell or Silent) with a preview button, and how long the alarm rings (5 seconds to 5 minutes)
 - **Reset to defaults**
 

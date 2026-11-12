@@ -65,7 +65,7 @@ one dial face; the multi-variant experiment is over.
 | `app/runtime/chromeSettings.ts`               | `chrome.storage.sync` settings store with a local fallback.                |
 | `app/runtime/settingsRuntime.ts`              | The settings seam (chrome vs mock).                                        |
 | `app/runtime/useSettings.ts`                  | `useSyncExternalStore` binding for settings.                               |
-| `app/runtime/useSettingsTheme.ts`             | Resolves the theme from the mode and writes `data-theme` to `<html>`.      |
+| `app/runtime/useSettingsTheme.ts`             | Resolves light/dark and Device; `deviceTheme.ts` reads Firefox toolbar colors and follows changes.      |
 | `app/runtime/useRemainingColor.ts`            | Publishes the dial's colours from the “Remaining” choice: `--remaining` (a fixed red/green, or the badge's ramp following the time left), `--preview` (what a click would start, so never the live grey) and `--accent` (the controls' hover and focus colour). |
 | `app/runtime/platform.ts`                     | `isExtension()` — the chrome-or-mock switch both seams use.                |
 | `app/runtime/chromeRuntime.ts`                | The `chrome.storage` + messaging `TimerRuntime`.                           |
@@ -228,10 +228,16 @@ and the `offscreen` permission to the manifest.
   `getState`/`subscribe` shape; `chromeSettings` uses `storage.sync` with a local
   fallback, `mockSettings` uses `localStorage`. Anything read from storage goes
   through `normalizeSettings`.
-- **The theme is one attribute and three overrides.** `useSettingsTheme` sets
-  `data-theme` (Auto resolved via `prefers-color-scheme`) and writes the face /
-  ticks / remaining overrides as inline custom properties — the base palette
-  stays in `tokens.css`.
+- **Device follows Firefox chrome.** `useSettingsTheme` uses `deviceTheme.ts` to read
+  the containing window’s toolbar colors with `browser.theme` (Firefox-only
+  `theme` permission), subscribes to updates, and ignores stale async reads.
+  `tokens.css` maps those colors to the surface and ink tokens. Missing theme
+  colors or APIs fall back to `prefers-color-scheme`; explicit Light/Dark remove
+  all browser overrides. Remaining-time colors are independent. `themeStatus.ts`
+  publishes the applied source or fallback reason for the Device note in Settings.
+  Custom mode uses saved `backgroundColor` / `textColor` hex values through the
+  same palette token mapping, with `data-custom-theme`. Normalization supplies
+  defaults for older settings and rejects malformed colors.
 
 ## Tests
 

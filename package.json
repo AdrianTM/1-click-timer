@@ -25,7 +25,8 @@
         "test:visual": "vitest run --project visual",
         "test:interaction": "vitest run --project interaction",
         "test:visual:update": "vitest run --project visual --update",
-        "screenshots": "npm run build && node scripts/store/capture.mjs"
+        "screenshots": "npm run build && node scripts/store/capture.mjs",
+        "screenshots:firefox": "npm run build:firefox && npm run package:firefox && python3 scripts/store/capture-firefox.py"
     },
     "repository": {
         "type": "git",

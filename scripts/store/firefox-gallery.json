@@ -1,0 +1,14 @@
+[
+    {
+        "filename": "01-light-timer.png",
+        "caption": "A running 25-minute countdown in the light theme, with a visual remaining-time dial."
+    },
+    {
+        "filename": "02-dark-timer.png",
+        "caption": "The fullscreen timer in the dark theme, with pause, mute, and settings controls."
+    },
+    {
+        "filename": "03-settings.png",
+        "caption": "Customize the appearance, remaining-time colors, alarm volume, sound, and ring duration."
+    }
+]

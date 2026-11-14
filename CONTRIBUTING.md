@@ -51,6 +51,7 @@ loop a fast way to work on the interface.
 | `npm run test:interaction`   | numeral hit-target interactions in Chromium and Firefox |
 | `npm run test:visual:update` | rewrite the screenshot baselines                   |
 | `npm run screenshots`        | build, then capture the store gallery into `dashboard/screenshots/` |
+| `npm run screenshots:firefox` | build/package Firefox, then capture its AMO gallery (requires geckodriver) |
 | `npm run format`             | Prettier write                                     |
 | `npm run format:check`       | Prettier check                                     |
 
@@ -156,6 +157,33 @@ tiles at 440×280 and 1400×560. The store accepts **at most five screenshots**,
 `01-idle.png` is deliberately not uploaded; see `CHROMEWEBSTORE.md` for the upload
 order. The images land in `dashboard/screenshots/`, which is gitignored —
 reproducible on demand, and never a gallery that lies about the current interface.
+
+## Firefox listing screenshots
+
+The Firefox gallery uses Python 3, Firefox, and geckodriver on your PATH.
+Start the driver in a separate terminal:
+
+```bash
+MOZ_REMOTE_ALLOW_SYSTEM_ACCESS=1 geckodriver --host 127.0.0.1 --port 4450
+```
+
+Then run `npm run screenshots:firefox`. To capture an already packaged release,
+run `python3 scripts/store/capture-firefox.py` directly. Set
+`FIREFOX_WEBDRIVER_URL` if the driver uses a different address.
+Stop geckodriver when finished.
+
+The script installs the Firefox ZIP in a disposable headless profile, starts a
+25-minute timer through the extension's real runtime, and captures light and dark
+fullscreen views plus Settings. It extracts the existing 128px icon from that
+same ZIP. No personal profile, credentials, or live user data are used.
+
+Files go to the ignored `dashboard/screenshots/firefox/` directory alongside
+`SHA256SUMS` and `capture.json` (package hash, extension/browser versions, and
+captions). Commit the generator and `scripts/store/firefox-gallery.json`; the
+icon source is already tracked at `src/images/icon.svg`. Generated PNGs stay out
+of Git, following the Chrome gallery convention. Inspect the images before
+uploading: this command does not publish or change the AMO listing. See
+`FIREFOXAMO.md` for the gallery order and upload instructions.
 
 ## Try it in Chrome
 

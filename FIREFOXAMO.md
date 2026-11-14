@@ -6,8 +6,8 @@ Ewerlöf's GPL-3.0 project, maintained in
 the Mozilla Account submitting this port is its publisher.
 
 Existing listing: <https://addons.mozilla.org/addon/1-click-timer-firefox/>.
-AMO reports published version **9.0.0** as of 2026-11-12. Submit **9.1.0** as
-an update to this listing; the local release commands do not publish it.
+AMO reports published version **9.1.0** as of 2026-11-14. Use this existing
+listing for future updates; the local release commands do not publish it.
 
 ## Release files
 
@@ -191,11 +191,30 @@ with/without a Firefox Account. Temporary installs do not establish restart beha
 Keep the background debugger closed for audio-host lifecycle tests and test both
 60-second and 300-second rings. See `CONTRIBUTING.md` for the complete checks.
 
-For listing screenshots, capture the current Firefox extension's running timer,
-dark appearance and settings. Avoid Chrome notification buttons or browser chrome
-in Firefox screenshots. `npm run screenshots` currently captures Chrome only;
-it is not a Firefox gallery generator. Screenshots have not been generated for
-this submission yet.
+## Listing gallery
+
+Three Firefox screenshots and the existing icon were prepared for version 9.1.0
+on 2026-11-14. Preparing these files does not confirm that AMO has received them.
+Regeneration commands are in `CONTRIBUTING.md` under Firefox listing screenshots.
+
+Upload these files from `dashboard/screenshots/firefox/` in order:
+
+| File | Caption |
+| --- | --- |
+| `01-light-timer.png` | A running 25-minute countdown in the light theme, with a visual remaining-time dial. |
+| `02-dark-timer.png` | The fullscreen timer in the dark theme, with pause, mute, and settings controls. |
+| `03-settings.png` | Customize the appearance, remaining-time colors, alarm volume, sound, and ring duration. |
+
+The machine-readable captions are in `scripts/store/firefox-gallery.json`.
+Use `icon-128.png` from the same output directory as the listing icon; it is
+extracted unchanged from the Firefox package's existing icon artwork.
+
+Open the existing listing's **Edit Information** page to update its icon and
+screenshots. These are listing-only changes and do not require a new extension
+version or source upload. If using AMO's API, upload each image as multipart
+form data, then save its caption with a separate JSON update. Respect
+`Retry-After` when Mozilla limits edits; successful uploads should not be repeated.
+Verify the icon, all three previews, and captions on the listing afterward.
 
 Official references checked for this preparation:
 
